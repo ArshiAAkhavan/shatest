@@ -1,8 +1,8 @@
 # shatest
-Simple simulation of what i encountered on that they with huj-agha-shateri
+Simple simulation of what I encountered on that day with HUJ-AGHA-SHATERI
 
 ## Problem
-The code on master branch contains the faulty implementation.
+The code on the master branch contains the faulty implementation.
 
 ### Run Simulation
 ```bash 
