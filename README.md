@@ -1,4 +1,4 @@
-# shatest
+# shatest (shateri-test)
 Simple simulation of what I encountered on that day with `huj agha ye shateri`
 
 ## Problem
