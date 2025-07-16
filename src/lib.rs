@@ -1,20 +1,17 @@
 #![allow(dead_code, unused_variables)]
 
-use loom::sync::atomic::{AtomicU8, AtomicUsize, Ordering};
-
+use loom::sync::atomic::{AtomicI8, AtomicU8, AtomicUsize, Ordering};
 
 struct System {
     gpu_tail: AtomicU8,
-    host_tail: AtomicU8,
-    is_processing: AtomicU8,
+    host_status: AtomicI8,
     call_back_queue: AtomicUsize,
 }
 impl System {
     fn new() -> Self {
         Self {
             gpu_tail: AtomicU8::new(0),
-            host_tail: AtomicU8::new(0),
-            is_processing: AtomicU8::new(0),
+            host_status: AtomicI8::new(0),
             call_back_queue: AtomicUsize::new(0),
         }
     }
@@ -34,7 +31,8 @@ impl System {
                 self.gpu_process()
             }
             if self.gpu_tail.load(Ordering::Acquire) == CAPACITY {
-                self.host_tail.store(CAPACITY, Ordering::Release)
+                self.host_status
+                    .fetch_add(CAPACITY as i8, Ordering::Release);
             }
         }
     }
@@ -42,11 +40,9 @@ impl System {
     fn host_run(&self) {
         dbg!("im in host");
         for _ in 0..ITERATIONS {
-            if self.host_tail.load(Ordering::Acquire) != 0
-                && self.is_processing.load(Ordering::Acquire) == 0
-            {
-                assert_ne!(self.host_tail.load(Ordering::Acquire), 0);
-                self.is_processing.store(1, Ordering::Release);
+            if self.host_status.load(Ordering::Acquire) > 0 {
+                assert!(self.host_status.load(Ordering::Acquire) > 0);
+                self.host_status.fetch_add(i8::MIN, Ordering::Release);
                 // process ...
                 self.schedule_callback();
             }
@@ -58,8 +54,7 @@ impl System {
         for _ in 0..ITERATIONS {
             if self.call_back_queue.load(Ordering::Acquire) > 0 {
                 self.call_back_queue.fetch_sub(1, Ordering::Release);
-                self.host_tail.store(0, Ordering::Release);
-                self.is_processing.store(0, Ordering::Release);
+                self.host_status.store(0, Ordering::Release);
                 self.gpu_tail.store(0, Ordering::Release);
             }
         }
@@ -99,3 +94,4 @@ mod test {
         h3.join().unwrap();
     }
 }
+
